@@ -14,6 +14,7 @@ A small Python (2.x) utility to download and maintain the dynamic set of Office 
 - tmsh edit the configuration json file
 
   `tmsh`
+  
   `edit sys file ifile o365_config.json`
 
 ### To uninstall
