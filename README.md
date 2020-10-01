@@ -36,13 +36,10 @@ The configuration json file controls the various settings of the script:
 
 **"service_areas":**
 
-    common: true|false               -> Microsoft 365 Common and Office Online"
-    
-    exchange: true|false             -> Exchange Online  
-    
-    sharepoint: true|false           -> SharePoint Online and OneDrive for Business
-    
-    skype: true|false                -> Skype for Business Online and Microsoft Teams
+    common: true|false                -> Microsoft 365 Common and Office Online"
+    exchange: true|false              -> Exchange Online  
+    sharepoint: true|false            -> SharePoint Online and OneDrive for Business
+    skype: true|false                 -> Skype for Business Online and Microsoft Teams
 
 
 *O365 Record objects to create*    
@@ -50,11 +47,8 @@ The configuration json file controls the various settings of the script:
 **"outputs"**: 
 
     url_categories: true|false        -> Create URL categories
-   
     url_datagroups: true|false        -> Create URL data groups
-   
     ip4_datagroups: true|false        -> Create IPv4 data groups
-   
     ip6_datagroups: true|false        -> Create IPv6 data groups
 
 
@@ -63,17 +57,14 @@ The configuration json file controls the various settings of the script:
 **"o365_categories"**:                  
 
     all: true|false                   -> Create a single date set containing all URLs (all categories)
-   
     optimize: true|false              -> Create a data set containing O365 Optimize category URLs (note that the optimized URLs are in Exchange and SharePoint service areas)
-   
     default: true|false               -> Create a data set containing O365 Allow category URLs
-   
     allow: true|false                 -> Create a data set containing O365 Default category URLs
 
 
 *O365 Endpoints to import - O365 required endpoints or all endpoints. WARNING: "import all" includes non-O365 URLs that one may not want to bypass (ex. www.youtube.com).*
 
-**"only_required"**: true|false            -> false=import all URLs, true=Office 365 required only URLs
+**"only_required"**: true|false       -> false=import all URLs, true=Office 365 required only URLs
 
 
 *Excluded URLs (URL pattern matching is supported). Provide URLs in list format - ex. ["m.facebook.com", ".itunes.apple.com", "bit.ly"].*
@@ -94,11 +85,8 @@ The configuration json file controls the various settings of the script:
 **"system"**:
 
     force_refresh: true|false        -> Action if O365 endpoint list is not updated (a "fetch now" function)
-   
     log_level: 1                     -> 0=none, 1=normal, 2=verbose
-   
     ha_config: 0                     -> 0=stand alone, 1=HA paired
-   
     device_group: "device-group-1".  -> Name of Sync-Failover Device Group.  Required for HA paired BIG-IP.
    
  
