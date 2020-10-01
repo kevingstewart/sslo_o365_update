@@ -12,11 +12,13 @@ A small Python (2.x) utility to download and maintain the dynamic set of Office 
 
 ### To modify the configuration
 - tmsh edit the configuration json file
+
   `tmsh`
   `edit sys file ifile o365_config.json`
 
 ### To uninstall
 - Run the script with the --uninstall option. This will remove the iCall script and handler, and configuration json file.
+
   `python sslo_o365_update.py --uninstall`
 
 ### Configuration environment
