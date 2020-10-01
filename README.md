@@ -61,7 +61,7 @@ The configuration json file controls the various settings of the script:
 
 ***Required O365 Endpoints to import** - O365 required endpoints or all endpoints. WARNING: "import all" includes non-O365 URLs that one may not want to bypass (ex. www.youtube.com).*
 
-    only_required: true|false       -> false=import all URLs, true=Office 365 required only URLs
+    only_required: true|false             -> false=import all URLs, true=Office 365 required only URLs
 
 
 ***Excluded URLs** - (URL pattern matching is supported). Provide URLs in list format - ex. ["m.facebook.com", ".itunes.apple.com", "bit.ly"].*
