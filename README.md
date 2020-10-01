@@ -23,7 +23,7 @@ A small Python (2.x) utility to download and maintain the dynamic set of Office 
   `python sslo_o365_update.py --uninstall`
 
 ### Configuration environment
-The installed script creates a working directory (/shared/o365), an configuration (iFile) json file, an iCall script, and iCall script periodic handler.
+The installed script creates a working directory (/shared/o365), a configuration (iFile) json file, an iCall script, and iCall script periodic handler.
 The configuration json file controls the various settings of the script:
 
 
