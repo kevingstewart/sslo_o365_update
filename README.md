@@ -27,6 +27,9 @@ This utility works on BIG-IP 14.1 and above, SSL Orchestrator 5.x and above.
 
   `python sslo_o365_update.py --uninstall`
 
+### HA installation
+- Perform the install operations on both units in an HA environment. The script will ensure that only the active member performs URL updates.
+
 ---
 
 ### The configuration environment
