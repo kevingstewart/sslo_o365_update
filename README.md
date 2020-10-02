@@ -27,6 +27,8 @@ This utility works on BIG-IP 14.1 and above, SSL Orchestrator 5.x and above.
 
   `python sslo_o365_update.py --uninstall`
 
+---
+
 ### The configuration environment
 The installed script creates a working directory (/shared/o365), a configuration (iFile) json file, an iCall script, and iCall script periodic handler. The configuration json file controls the various settings of the script.
 
