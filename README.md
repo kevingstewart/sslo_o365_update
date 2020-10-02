@@ -93,4 +93,25 @@ The installed script creates a working directory (/shared/o365), a configuration
         device_group: "device-group-1".  -> Name of Sync-Failover Device Group.  Required if "ha_config" is true (1).
    
  
+---
+
+**Extra**
+
+In this environment it is also possible to manage the configuration remotely by updating the json iFile content.
+
+- Obtain a copy of the existing json configuration data using the interactive tmsh edit (see above "How to modify the configuration") and save to a local file. 
+
+- Determine the file size in bytes (after editing). On some systems, the following works: **du -b config.json**. On a Mac, use the following: **ls -l config.json |awk -F" " '{print $5 }'**.
+
+- Upload the file to a staging path. Modify the "Content-Range" header value to indicate the start-end range (0 - size-1)/size.
+
+`curl -isk -u admin:admin -H "Content-Type: application/octet-stream" -H "Content-Range: 0-1066/1067" --data-binary "@config.json" https://big-ip/mgmt/shared/file-transfer/uploads/config.json`
+
+- Optional, combine the size calculation and upload into a single call:
+
+`size=`ls -l config.json |awk -F" " '{print $5 }'` && curl -isk -u admin:admin -H "Content-Type: application/octet-stream" -H "Content-Range: 0-$(expr ${size} - 1)/${size}" --data-binary "@config.json" https://big-ip/mgmt/shared/file-transfer/uploads/config.json`
+
+- Update the iFile object:
+
+`curl -vk -u admin:admin -X PUT -H "Content-Type: application/json" -d '{"name": "o365_config.json", "source-path": "file:/var/config/rest/downloads/config.json"}' https://big-ip/mgmt/tm/sys/file/ifile/o365_config.json`
 
