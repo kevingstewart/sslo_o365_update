@@ -109,7 +109,7 @@ In this environment it is also possible to manage the configuration remotely by 
 
 - Optional, combine the size calculation and upload into a single call:
 
-  `size=`ls -l config.json |awk -F" " '{print $5 }'` && curl -isk -u admin:admin -H "Content-Type: application/octet-stream" -H "Content-Range: 0-$(expr ${size} - 1)/${size}" --data-binary "@config.json" https://big-ip/mgmt/shared/file-transfer/uploads/config.json`
+  `size=\`ls -l config.json |awk -F" " '{print $5 }'\` && curl -isk -u admin:admin -H "Content-Type: application/octet-stream" -H "Content-Range: 0-$(expr ${size} - 1)/${size}" --data-binary "@config.json" https://big-ip/mgmt/shared/file-transfer/uploads/config.json`
 
 - Update the iFile object:
 
