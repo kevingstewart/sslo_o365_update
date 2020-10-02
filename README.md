@@ -101,7 +101,7 @@ In this environment it is also possible to manage the configuration remotely by 
 
 - Obtain a copy of the existing json configuration data using the interactive tmsh edit (see above "How to modify the configuration") and save to a local file. 
 
-- Determine the file size in bytes (after editing). On some systems, the following works: **du -b config.json**. On a Mac, use the following: **ls -l config.json |awk -F" " '{print $5 }'**.
+- Determine the file size in bytes (after editing). On some systems, the following works: **du -b config.json**. On a Mac, you can use the following: **ls -l config.json |awk -F" " '{print $5 }'**.
 
 - Upload the file to a staging path. Modify the "Content-Range" header value to indicate the start-end range (0 - size-1)/size.
 
