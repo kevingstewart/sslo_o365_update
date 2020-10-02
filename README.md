@@ -99,7 +99,7 @@ The installed script creates a working directory (/shared/o365), a configuration
 
 In this environment it is also possible to manage the configuration remotely by updating the json iFile content.
 
-- Obtain a copy of the existing json configuration data using the interactive tmsh edit (see above "How to modify the configuration") and save to a local file. 
+- Obtain a copy of the existing json configuration data using the interactive tmsh edit (see above "How to modify the configuration") and save to a local file. Edit as required. 
 
 - Determine the file size in bytes (after editing). On some systems, the following works: **du -b config.json**. On a Mac, you can use the following: **ls -l config.json |awk -F" " '{print $5 }'**.
 
