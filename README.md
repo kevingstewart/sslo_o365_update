@@ -1,6 +1,8 @@
 # F5 SSL Orchestrator Office 365 URL Update Script
 A small Python (2.x) utility to download and maintain the dynamic set of Office 365 URLs as data groups and custom URL categories on the F5 BIG-IP, for use with SSL Orchestrator.
 
+[![Releases](https://img.shields.io/github/v/release/kevingstewart/sslo_o365_update.svg)](https://github.com/kevingstewart/sslo_o365_update/releases)
+
 ### Version support
 This utility works on BIG-IP 14.1 and above, SSL Orchestrator 5.x and above.
 
