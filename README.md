@@ -27,8 +27,13 @@ This utility works on BIG-IP 14.1 and above, SSL Orchestrator 5.x and above.
 
   `python sslo_o365_update.py --uninstall`
 
+### How to force an update
+- With the configuration setting "force_refresh" set to False, a URL update will only occur if the endpoint version has changed. The --force option overrides to force a refresh.
+
+  `python sslo_o365_update.py --force`
+
 ### HA installation
-- Perform the install operations on both units in an HA environment. The script will ensure that only the active member performs URL updates.
+- Perform the install operations on both units in an HA environment and then sync. The script runs independently on each peer and will not trigger an out-of-sync indication when updates are made.
 
 ---
 
