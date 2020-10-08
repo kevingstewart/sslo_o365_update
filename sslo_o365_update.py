@@ -1,7 +1,7 @@
 #!/bin/python
 # -*- coding: utf-8 -*-
 # O365 URL/IP update automation for BIG-IP
-# Version: 7.0
+# Version: 7.1
 # Last Modified: October 2020
 # Update author: Kevin Stewart, Sr. SSA F5 Networks
 # Contributors: Regan Anderson, Brett Smith, F5 Networks
@@ -10,6 +10,10 @@
 # >>> NOTE: THIS VERSION OF THE OFFICE 365 SCRIPT IS ONLY SUPPORTED BY SSL ORCHESTRATOR 7.0 OR HIGHER <<<
 #
 # Updated for SSL Orchestrator by Kevin Stewart, SSA, F5 Networks (kevin@f5.com)
+# Update 20201008 - to support additional enhancements by Kevin Stewart
+#   - Updated to support HA mode (both peers perform updates and do not an trigger out-of-sync)
+#   - Updated to resolve issue if multiple versions of configuration iFile exists (takes latest)
+#   - Updated to include --force option to force a manual update (irrespective of config force_o365_record_refresh value)
 # Update 20200925 - to support additional enhancements by Kevin Stewart
 #   - Updated to support O365 optimize/allow/default categories as separate outputs
 #   - Updated to support options to output to URL categories and/or URL data groups
@@ -167,8 +171,8 @@ list_ipv4_to_pbr = []
 list_ipv6_to_pbr = []
 failover_state = ""
 
-def log(lev, msg):
-    if log_level >= lev:
+def log(lev, log_lev, msg):
+    if int(log_lev) >= int(lev):
         log_string = "{0:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now()) + " " + msg + "\n"
         f = open(log_dest_file, "a")
         f.write(log_string)
@@ -199,7 +203,10 @@ def main():
     global log_level
     global ha_config
     global device_group
+    global force_update
 
+    # Initialize force_update to false
+    force_update = False
 
     # -----------------------------------------------------------------------
     # Parse command line arguments
@@ -213,6 +220,9 @@ def main():
         script_install()
     elif sys.argv[1] == "--uninstall":
         script_uninstall()
+    elif sys.argv[1] == "--force":
+        force_update = True
+        pass
     elif sys.argv[1] == "--go":
         pass
     else:
@@ -224,19 +234,25 @@ def main():
     # Check if this script is installed by looking for iFile configuration, then load up configuration variables
     # -----------------------------------------------------------------------
     try:
+        # Find all versions of the configuration iFile
         o365_config = ""
+        entry_array = []
         fileList = os.listdir('/config/filestore/files_d/Common_d/ifile_d/')
         pattern = "*o365_config.json*"
         for entry in fileList:
             if fnmatch.fnmatch(entry, pattern):
-                o365_config = entry
+                entry_array.append("/config/filestore/files_d/Common_d/ifile_d/" + entry)
+        
+        ## Find the latest version of the configuration iFile
+        if entry_array:
+           o365_config = max(entry_array, key=os.path.getctime)
     
         if o365_config == "":
             print("\nIt appears this script has not been installed yet. Aborting\n\nTo install this script, issue the command \"" + os.path.basename(__file__) + " --install <time>\"\n\n")
             show_help()
         
         try:
-            f = open('/config/filestore/files_d/Common_d/ifile_d/' + o365_config, "r")
+            f = open(o365_config, "r")
             f_content = f.read()
             f.close()
             config_data = json.loads(f_content)
@@ -263,7 +279,7 @@ def main():
             log_level                   = config_data["system"]["log_level"]
             ha_config                   = config_data["system"]["ha_config"]
             device_group                = config_data["system"]["device_group"]
-            
+
         except:
             print("\nIt appears the JSON configuration file is either missing or corrupt. Run the script again with the --install <time> option to repair.")
             show_help()
@@ -271,21 +287,6 @@ def main():
     except:
         print("\nIt appears this script has not been installed yet. Aborting\n\nTo install this script, issue the command \"" + os.path.basename(__file__) + " --install <time>\"\n\n")
         show_help()
-
-
-    # -----------------------------------------------------------------------
-    # Check if this BIG-IP is ACTIVE for the traffic group (= traffic_group_name)
-    # -----------------------------------------------------------------------
-    # Check BIG-IP HA configuration and only perform on the active HA peer (or standalone device)
-    result = commands.getoutput("tmsh show /cm failover-status field-fmt")
-
-    if ("status ACTIVE" in result) or (ha_config == 0):
-        failover_state = "active"       # For future use
-        log(1, "This BIG-IP is standalone or HA ACTIVE. Initiating O365 update.")
-    else:
-        failover_state = "non-active"   # For future use
-        log(1, "This BIG-IP is HA STANDBY. Aborting O365 update.")
-        sys.exit(0)
     
 
     # -----------------------------------------------------------------------
@@ -294,13 +295,13 @@ def main():
     # Create the guid file if it doesn't exist
     if not os.path.isdir(work_directory):
         os.mkdir(work_directory)
-        log(1, "Created work directory " + work_directory + " because it did not exist.")
+        log(1, log_level, "Created work directory " + work_directory + " because it did not exist.")
     if not os.path.exists(file_name_guid):
         f = open(file_name_guid, "w")
         f.write("\n")
         f.flush()
         f.close()
-        log(1, "Created GUID file " + file_name_guid + " because it did not exist.")
+        log(1, log_level, "Created GUID file " + file_name_guid + " because it did not exist.")
 
     # Read guid from file and validate.  Create one if not existent
     f = open(file_name_guid, "r")
@@ -308,14 +309,14 @@ def main():
     f.close()
     if re.match('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', f_content):
         guid = f_content
-        log(2, "Valid GUID is read from local file " + file_name_guid + ".")
+        log(2, log_level, "Valid GUID is read from local file " + file_name_guid + ".")
     else:
         guid = str(uuid.uuid4())
         f = open(file_name_guid, "w")
         f.write(guid)
         f.flush()
         f.close()
-        log(1, "Generated a new GUID, and saved it to " + file_name_guid + ".")
+        log(1, log_level, "Generated a new GUID, and saved it to " + file_name_guid + ".")
 
 
     # -----------------------------------------------------------------------
@@ -329,21 +330,21 @@ def main():
         # Check if the VERSION record format is valid
         if re.match('[0-9]{10}', f_content):
             ms_o365_version_previous = f_content
-            log(2, "Valid previous VERSION found in " + file_ms_o365_version + ".")
+            log(2, log_level, "Valid previous VERSION found in " + file_ms_o365_version + ".")
         else:
             ms_o365_version_previous = "1970010200"
             f = open(file_ms_o365_version, "w")
             f.write(ms_o365_version_previous)
             f.flush()
             f.close()
-            log(1, "Valid previous VERSION was not found.  Wrote dummy value in " + file_ms_o365_version + ".")
+            log(1, log_level, "Valid previous VERSION was not found.  Wrote dummy value in " + file_ms_o365_version + ".")
     else:
         ms_o365_version_previous = "1970010200"
         f = open(file_ms_o365_version, "w")
         f.write(ms_o365_version_previous)
         f.flush()
         f.close()
-        log(1, "Valid previous VERSION was not found.  Wrote dummy value in " + file_ms_o365_version + ".")
+        log(1, log_level, "Valid previous VERSION was not found.  Wrote dummy value in " + file_ms_o365_version + ".")
 
 
     # -----------------------------------------------------------------------
@@ -356,11 +357,11 @@ def main():
 
     if not res.getcode() == 200:
         # MS O365 version request failed - abort
-        log(1, "VERSION request to MS web service failed.  Aborting operation.")
+        log(1, log_level, "VERSION request to MS web service failed.  Aborting operation.")
         sys.exit(0)
     else:
         # MS O365 version request succeeded
-        log(2, "VERSION request to MS web service was successful.")
+        log(2, log_level, "VERSION request to MS web service was successful.")
         dict_o365_version = json.loads(res.read())
 
     ms_o365_version_latest = ""
@@ -375,11 +376,15 @@ def main():
                     f.flush()
                     f.close()
 
-    log(2, "Previous VERSION is " + ms_o365_version_previous)
-    log(2, "Latest VERSION is " + ms_o365_version_latest)
+    log(2, log_level, "Previous VERSION is " + ms_o365_version_previous)
+    log(2, log_level, "Latest VERSION is " + ms_o365_version_latest)
 
-    if ms_o365_version_latest == ms_o365_version_previous and force_o365_record_refresh == 0:
-        log(1, "You already have the latest MS O365 URL/IP Address list: " + ms_o365_version_latest + ". Aborting operation.")
+
+    if force_update:
+        log(1, log_level, "Command called with \"--force\" option. Manual update initiated.")
+        pass
+    elif ms_o365_version_latest == ms_o365_version_previous and force_o365_record_refresh == 0:
+        log(1, log_level, "You already have the latest MS O365 URL/IP Address list: " + ms_o365_version_latest + ". Aborting operation.")
         sys.exit(0)
 
 
@@ -393,10 +398,10 @@ def main():
 
     if not res.getcode() == 200:
         # MS O365 endpoints request failed - abort
-        log(1, "ENDPOINTS request to MS web service failed. Aborting operation.")
+        log(1, log_level, "ENDPOINTS request to MS web service failed. Aborting operation.")
         sys.exit(0)
     else:
-        log(2, "ENDPOINTS request to MS web service was successful.")
+        log(2, log_level, "ENDPOINTS request to MS web service was successful.")
         dict_o365_all = json.loads(res.read())
 
     # Process for each record(id) of the endpoint JSON data - this churns the JSON data into separate URL lists
@@ -502,7 +507,7 @@ def main():
         ipv4_undup = []
     if not output_ip6_datagroups:
         ipv6_undup = []
-    log(1, "Number of unique ENDPOINTS to import : URL:" + str(len(urls_undup)) + ", IPv4 host/net:" + str(len(ipv4_undup)) + ", IPv6 host/net:" + str(len(ipv6_undup)))
+    log(1, log_level, "Number of unique ENDPOINTS to import : URL:" + str(len(urls_undup)) + ", IPv4 host/net:" + str(len(ipv4_undup)) + ", IPv6 host/net:" + str(len(ipv6_undup)))
 
 
     # -----------------------------------------------------------------------
@@ -545,16 +550,7 @@ def main():
             create_ip_datagroups (o365_dg_ipv6, ipv6_undup)
 
 
-    #-----------------------------------------------------------------------
-    # Initiate Config Sync: Device to Group
-    #-----------------------------------------------------------------------
-    if ha_config:
-        log(1, "Initiating Config-Sync.")
-        result = commands.getoutput("tmsh run cm config-sync to-group " + device_group_name)
-        log(2, result + "\n")
-
-
-    log(1, "Completed O365 URL/IP address update process.")
+    log(1, log_level, "Completed O365 URL/IP address update process.")
 
 
 def create_url_categories (url_file, url_list, version_latest):
@@ -562,14 +558,19 @@ def create_url_categories (url_file, url_list, version_latest):
     str_urls_to_bypass = ""
 
     # Create new or clean out existing URL category - add the latest version as first entry
-    result = commands.getoutput("tmsh list sys url-db url-category " + url_file)
+    result = commands.getoutput("tmsh list sys application service o365_update.app/o365_update")
     if "was not found" in result:
-        result2 = commands.getoutput("tmsh create /sys url-db url-category " + url_file + " display-name " + url_file)
-        result3 = commands.getoutput("tmsh modify /sys url-db url-category " + url_file + " urls replace-all-with { https://" + version_latest + " { type exact-match } }")
-        log(2, "O365 custom URL category (" + url_file + ") not found. Created new O365 custom category.")
+        result2 = commands.getoutput("tmsh create sys application service o365_update traffic-group traffic-group-local-only device-group none")
+        log(2, log_level, "Application service not found. Creating o365_update.app/o365_update")
+    
+    result = commands.getoutput("tmsh list sys url-db url-category o365_update.app/" + url_file)
+    if "was not found" in result:
+        result2 = commands.getoutput("tmsh create /sys url-db url-category o365_update.app/" + url_file + " display-name " + url_file)
+        result3 = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + " urls replace-all-with { https://" + version_latest + " { type exact-match } }")
+        log(2, log_level, "O365 custom URL category (" + url_file + ") not found. Created new O365 custom category.")
     else:
-        result2 = commands.getoutput("tmsh modify /sys url-db url-category " + url_file + " urls replace-all-with { https://" + version_latest + "/ { type exact-match } }")
-        log(2, "O365 custom URL category (" + url_file + ") exists. Clearing entries for new data.")
+        result2 = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + " urls replace-all-with { https://" + version_latest + "/ { type exact-match } }")
+        log(2, log_level, "O365 custom URL category (" + url_file + ") exists. Clearing entries for new data.")
     
     # Loop through URLs and insert into URL category    
     for url in url_list:
@@ -585,7 +586,7 @@ def create_url_categories (url_file, url_list, version_latest):
             str_urls_to_bypass = str_urls_to_bypass + " urls add { https://" + url + " { type exact-match } } urls add { http://" + url + " { type exact-match } }"
 
     # Import the URL entries
-    result = commands.getoutput("tmsh modify /sys url-db url-category " + url_file + str_urls_to_bypass)
+    result = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + str_urls_to_bypass)
 
 
 def create_url_datagroups (url_file, url_list):
@@ -599,19 +600,24 @@ def create_url_datagroups (url_file, url_list):
     fout.close()
 
     # Create URL data group files in TMSH if they don't already exist
-    result = commands.getoutput("tmsh list /sys file data-group " + url_file)
+    result = commands.getoutput("tmsh list sys application service o365_update.app/o365_update")
+    if "was not found" in result:
+        result2 = commands.getoutput("tmsh create sys application service o365_update traffic-group traffic-group-local-only device-group none")
+        log(2, log_level, "Application service not found. Creating o365_update.app/o365_update")
+
+    result = commands.getoutput("tmsh list /sys file data-group o365_update.app/" + url_file)
     if "was not found" in result:
         # Create (sys) external data group
-        result2 = commands.getoutput("tmsh create /sys file data-group " + url_file + " separator \":=\" source-path file:" + work_directory + url_file + " type string")
+        result2 = commands.getoutput("tmsh create /sys file data-group o365_update.app/" + url_file + " separator \":=\" source-path file:" + work_directory + url_file + " type string")
         # Create (ltm) link to external data group
-        result3 = commands.getoutput("tmsh create /ltm data-group external " + url_file + " external-file-name " + url_file)
-        log(2, "O365 URL data group (" + url_file + ") not found. Created new data group.")
+        result3 = commands.getoutput("tmsh create /ltm data-group external o365_update.app/" + url_file + " external-file-name o365_update.app/" + url_file)
+        log(2, log_level, "O365 URL data group (" + url_file + ") not found. Created new data group.")
     else:
         # Update (sys) external data group
-        result2 = commands.getoutput("tmsh modify /sys file data-group " + url_file + " source-path file:" + work_directory + url_file)
+        result2 = commands.getoutput("tmsh modify /sys file data-group o365_update.app/" + url_file + " source-path file:" + work_directory + url_file)
         # Update (ltm) link to external data group
-        result3 = commands.getoutput("tmsh create /ltm data-group external " + url_file + " external-file-name " + url_file)
-        log(2, "O365 URL data group (" + url_file + ") exists. Updated existing data group.")
+        result3 = commands.getoutput("tmsh create /ltm data-group external o365_update.app/" + url_file + " external-file-name o365_update.app/" + url_file)
+        log(2, log_level, "O365 URL data group (" + url_file + ") exists. Updated existing data group.")
 
     os.remove(work_directory + url_file)
 
@@ -625,15 +631,20 @@ def create_ip_datagroups (url_file, url_list):
     fout.close()
 
     # Create URL data group files in TMSH if they don't already exist
-    result = commands.getoutput("tmsh list /sys file data-group " + url_file)
+    result = commands.getoutput("tmsh list sys application service o365_update.app/o365_update")
     if "was not found" in result:
-        result2 = commands.getoutput("tmsh create /sys file data-group " + url_file + " source-path file:" + work_directory + url_file + " type ip")
-        result3 = commands.getoutput("tmsh create /ltm data-group external " + url_file + " external-file-name " + url_file)
-        log(2, "O365 IPv4 data group (" + url_file + ") not found. Created new data group.")
+        result2 = commands.getoutput("tmsh create sys application service o365_update traffic-group traffic-group-local-only device-group none")
+        log(2, log_level, "Application service not found. Creating o365_update.app/o365_update")
+
+    result = commands.getoutput("tmsh list /sys file data-group o365_update.app/" + url_file)
+    if "was not found" in result:
+        result2 = commands.getoutput("tmsh create /sys file data-group o365_update.app/" + url_file + " source-path file:" + work_directory + url_file + " type ip")
+        result3 = commands.getoutput("tmsh create /ltm data-group external o365_update.app/" + url_file + " external-file-name o365_update.app/" + url_file)
+        log(2, log_level, "O365 IPv4 data group (" + url_file + ") not found. Created new data group.")
     else:
-        result2 = commands.getoutput("tmsh modify /sys file data-group " + url_file + " source-path file:" + work_directory + url_file)
-        result3 = commands.getoutput("tmsh create /ltm data-group external " + url_file + " external-file-name " + url_file)
-        log(2, "O365 IPv4 data group (" + url_file + ") exists. Updated existing data group.")
+        result2 = commands.getoutput("tmsh modify /sys file data-group o365_update.app/" + url_file + " source-path file:" + work_directory + url_file)
+        result3 = commands.getoutput("tmsh create /ltm data-group external o365_update.app/" + url_file + " external-file-name o365_update.app/" + url_file)
+        log(2, log_level, "O365 IPv4 data group (" + url_file + ") exists. Updated existing data group.")
 
     os.remove(work_directory + url_file)
 
@@ -700,7 +711,7 @@ def script_install ():
         "excluded_ips": [],
         "system": {
             "force_refresh": False,
-            "log_level": 1,
+            "log_level": 2,
             "ha_config": 0,
             "device_group": "device-group-1"
         }
@@ -760,6 +771,7 @@ def show_help ():
     print("-h                   -> Show this help\n")
     print("--install <time>     -> Install the script and environment, and set script run time in seconds (ex. 3600 sec = 1 hr)\n")
     print("--uninstall          -> Uninstall the script and environment\n")
+    print("--force              -> Force a manual update\n")
     print("--go                 -> Run this script\n\n")
     sys.exit(0)
 
