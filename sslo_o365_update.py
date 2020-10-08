@@ -711,7 +711,7 @@ def script_install ():
         "excluded_ips": [],
         "system": {
             "force_refresh": False,
-            "log_level": 2,
+            "log_level": 1,
             "ha_config": 0,
             "device_group": "device-group-1"
         }
