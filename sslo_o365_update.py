@@ -1,7 +1,7 @@
 #!/bin/python
 # -*- coding: utf-8 -*-
 # O365 URL/IP update automation for BIG-IP
-# Version: 7.1
+# Version: 7.1.2
 # Last Modified: October 2020
 # Update author: Kevin Stewart, Sr. SSA F5 Networks
 # Contributors: Regan Anderson, Brett Smith, F5 Networks
@@ -9,7 +9,8 @@
 #
 # >>> NOTE: THIS VERSION OF THE OFFICE 365 SCRIPT IS ONLY SUPPORTED BY SSL ORCHESTRATOR 7.0 OR HIGHER <<<
 #
-# Updated for SSL Orchestrator by Kevin Stewart, SSA, F5 Networks (kevin@f5.com)
+# Updated for SSL Orchestrator by Kevin Stewart, SSA, F5 Networks
+# Update 20201104 - resolved URL category format issue
 # Update 20201008 - to support additional enhancements by Kevin Stewart
 #   - Updated to support HA mode (both peers perform updates and do not an trigger out-of-sync)
 #   - Updated to resolve issue if multiple versions of configuration iFile exists (takes latest)
@@ -566,7 +567,7 @@ def create_url_categories (url_file, url_list, version_latest):
     result = commands.getoutput("tmsh list sys url-db url-category o365_update.app/" + url_file)
     if "was not found" in result:
         result2 = commands.getoutput("tmsh create /sys url-db url-category o365_update.app/" + url_file + " display-name " + url_file)
-        result3 = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + " urls replace-all-with { https://" + version_latest + " { type exact-match } }")
+        result3 = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + " urls replace-all-with { https://" + version_latest + "/ { type exact-match } }")
         log(2, log_level, "O365 custom URL category (" + url_file + ") not found. Created new O365 custom category.")
     else:
         result2 = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + " urls replace-all-with { https://" + version_latest + "/ { type exact-match } }")
@@ -581,9 +582,9 @@ def create_url_categories (url_file, url_list, version_latest):
         if ('*' in url):
             # Escaping any asterisk characters
             url_processed = re.sub('\*', '\\*', url)
-            str_urls_to_bypass = str_urls_to_bypass + " urls add { \"https://" + url_processed + "\" { type glob-match } } urls add { \"http://" + url_processed + "\" { type glob-match } }"
+            str_urls_to_bypass = str_urls_to_bypass + " urls add { \"https://" + url_processed + "/\" { type glob-match } } urls add { \"http://" + url_processed + "/\" { type glob-match } }"
         else:
-            str_urls_to_bypass = str_urls_to_bypass + " urls add { https://" + url + " { type exact-match } } urls add { http://" + url + " { type exact-match } }"
+            str_urls_to_bypass = str_urls_to_bypass + " urls add { \"https://" + url + "/\" { type exact-match } } urls add { \"http://" + url + "/\" { type exact-match } }"
 
     # Import the URL entries
     result = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + str_urls_to_bypass)
