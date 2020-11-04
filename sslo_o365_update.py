@@ -7,7 +7,7 @@ version = "7.1.2"
 # Contributors: Regan Anderson, Brett Smith, F5 Networks
 # Original author: Makoto Omura, F5 Networks Japan G.K.
 #
-# >>> NOTE: THIS VERSION OF THE OFFICE 365 SCRIPT IS ONLY SUPPORTED BY SSL ORCHESTRATOR 7.0 OR HIGHER <<<
+# >>> NOTE: THIS VERSION OF THE OFFICE 365 SCRIPT IS SUPPORTED BY SSL ORCHESTRATOR 6.0 OR HIGHER <<<
 #
 # Updated for SSL Orchestrator by Kevin Stewart, SSA, F5 Networks
 # Update 20201104 - resolved URL category format issue
