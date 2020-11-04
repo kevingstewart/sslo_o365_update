@@ -1,7 +1,7 @@
 #!/bin/python
 # -*- coding: utf-8 -*-
 # O365 URL/IP update automation for BIG-IP
-# Version: 7.1.2
+version = 7.1.2
 # Last Modified: October 2020
 # Update author: Kevin Stewart, Sr. SSA F5 Networks
 # Contributors: Regan Anderson, Brett Smith, F5 Networks
@@ -768,6 +768,7 @@ def script_uninstall ():
 
 
 def show_help ():
+    print("Office 365 URL Management Script. Version: " + version)
     print("\nCommand line options for this application are:\n")
     print("-h                   -> Show this help\n")
     print("--install <time>     -> Install the script and environment, and set script run time in seconds (ex. 3600 sec = 1 hr)\n")
