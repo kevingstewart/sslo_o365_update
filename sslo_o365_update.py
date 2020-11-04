@@ -566,11 +566,10 @@ def create_url_categories (url_file, url_list, version_latest):
     
     result = commands.getoutput("tmsh list sys url-db url-category o365_update.app/" + url_file)
     if "was not found" in result:
-        result2 = commands.getoutput("tmsh create /sys url-db url-category o365_update.app/" + url_file + " display-name " + url_file)
-        result3 = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + " urls replace-all-with { https://" + version_latest + "/ { type exact-match } }")
+        result2 = commands.getoutput("tmsh create /sys url-db url-category " + url_file + " display-name " + url_file + " app-service o365_update.app/o365_update urls replace-all-with { https://" + version_latest + "/ { type exact-match } } default-action allow")
         log(2, log_level, "O365 custom URL category (" + url_file + ") not found. Created new O365 custom category.")
     else:
-        result2 = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + " urls replace-all-with { https://" + version_latest + "/ { type exact-match } }")
+        result2 = commands.getoutput("tmsh modify /sys url-db url-category " + url_file + " app-service o365_update.app/o365_update urls replace-all-with { https://" + version_latest + "/ { type exact-match } }")
         log(2, log_level, "O365 custom URL category (" + url_file + ") exists. Clearing entries for new data.")
     
     # Loop through URLs and insert into URL category    
@@ -587,7 +586,7 @@ def create_url_categories (url_file, url_list, version_latest):
             str_urls_to_bypass = str_urls_to_bypass + " urls add { \"https://" + url + "/\" { type exact-match } } urls add { \"http://" + url + "/\" { type exact-match } }"
 
     # Import the URL entries
-    result = commands.getoutput("tmsh modify /sys url-db url-category o365_update.app/" + url_file + str_urls_to_bypass)
+    result = commands.getoutput("tmsh modify /sys url-db url-category " + url_file + " app-service o365_update.app/o365_update" + str_urls_to_bypass)
 
 
 def create_url_datagroups (url_file, url_list):
